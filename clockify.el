@@ -85,6 +85,7 @@
   The PATH is the url for `request' function; METHOD is
   the request type and then BODY is the arguments for rest."
   (setq clockify-error nil)
+  (clockify--log "[REQUEST]: %s %s" method path)
   (let ((response (request-response-data
                    (request (concat "https://api.clockify.me/api/v1" path)
                      :headers `(("Content-Type" . "application/json")

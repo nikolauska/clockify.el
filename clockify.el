@@ -73,6 +73,7 @@
     (pcase status-code
       (400 (message "400 - Bad request.  Please check error message and your parameters"))
       (401 (message "401 - Invalid Authentication"))
+      (403 (message "403 - Invalid Authentication"))
       (404 (message "404 - Not found"))
       (429 (message "429 - Rate limit reached for requests"))
       (500 (message "500 - The server had an error while processing your request"))

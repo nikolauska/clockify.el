@@ -11,8 +11,7 @@ Add this to your config file
   :load-path "~/projects/clockify.el"
   :config
   (setq clockify-api-key "<api-key>")
-  (setq clockify-user-id "<user-id>")
-  (setq clockify-workspace "<workspace-id>"))
+  (setq clockify-user-id "<user-id>"))
 ```
 
 ### Doom emacs
@@ -31,6 +30,5 @@ Add this to your config file
         :desc "Stop timer"          "l" #'clockify-stop)
   :config
   (setq clockify-api-key "<api-key>")
-  (setq clockify-user-id "<user-id>")
-  (setq clockify-workspace "<workspace-id>"))
+  (setq clockify-user-id "<user-id>"))
 ```

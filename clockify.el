@@ -40,7 +40,6 @@
 
 (defvar clockify-api-key "Clockify API key.")
 (defvar clockify-user-id "Clockify user id.")
-(defvar clockify-workspace "Clockify workspace id.")
 
 (defvar clockify-error nil
   "Records for the last error.")
@@ -100,8 +99,9 @@
                                (clockify--handle-error response)))))))
     response))
 
-(defun clockify--select-project (projects)
-  "Select a project from the list of provided PROJECTS."
+
+(defun clockify--select-project (workspace)
+  "Select a project for selected WORKSPACE."
   (interactive)
   (let ((project (completing-read
                   "Choose clockify project: "
@@ -112,11 +112,24 @@
                              (nth 0 project)
                              " / "
                              (nth 1 project)))
-                          projects))))
+                          (clockify--get-projects workspace)))))
     (car (split-string project "\s"))))
 
-(defun clockify--get-projects ()
-  "Get all clockify projects."
+(defun clockify--select-workspace ()
+  "Select a workspace."
+  (interactive)
+  (let ((project (completing-read
+                  "Choose clockify workspace: "
+                  (mapcar (lambda (project)
+                            (concat
+                             (nth 1 project)
+                             " - "
+                             (nth 0 project)))
+                          (clockify--get-workspaces)))))
+    (nth 2 (split-string project "\s"))))
+
+(defun clockify--get-projects (workspace)
+  "Get all clockify projects for WORKSPACE."
   (interactive)
   (clockify--log "Getting all clockify projects...")
   (let ((page 1)
@@ -126,7 +139,7 @@
     (while (not break)
       (clockify--log (format "Fetching page: %d" page))
       (let* ((params (format "?page=%d&page-size=%d" page page-size))
-             (projects (clockify--request "GET" (concat "/workspaces/" clockify-workspace "/projects" params))))
+             (projects (clockify--request "GET" (concat "/workspaces/" workspace "/projects" params))))
         (progn
           (clockify--log (format "Total projects fetched: %d" (length clockify-projects)))
           (setq clockify-projects (vconcat clockify-projects projects))
@@ -141,21 +154,48 @@
                 (list clientName name id)))
             clockify-projects)))
 
+(defun clockify--get-workspaces()
+  "Start a clockify time entry for the selected project."
+  (interactive)
+  (clockify--log "Getting all clockify workspaces...")
+  (let ((page 1)
+        (page-size 5000)
+        (break nil)
+        (clockify-workspaces '()))
+    (while (not break)
+      (clockify--log (format "Fetching page: %d" page))
+      (let* ((params (format "?page=%d&page-size=%d" page page-size))
+             (workspaces (clockify--request "GET" (concat "/workspaces" params))))
+        (progn
+          (clockify--log (format "Total projects fetched: %d" (length clockify-workspaces)))
+          (setq clockify-workspaces (vconcat clockify-workspaces workspaces))
+          (setq page (+ page 1))
+          (when (< (length workspaces) page-size)
+            (setq break t)))))
+    (clockify--log "Done. Fetched all clockify data.")
+    (mapcar (lambda (project)
+              (let ((name (cdr (assoc 'name project)))
+                    (id (cdr (assoc 'id project))))
+                (list name id)))
+            clockify-workspaces)))
+
 (defun clockify-start ()
   "Start a clockify time entry for the selected project."
   (interactive)
-  (clockify--request "POST" (concat "/workspaces/" clockify-workspace "/time-entries")
-                     (list
-                      (cons "start" (format-time-string "%Y-%m-%dT%TZ" (current-time) t))
-                      (cons "projectId" (clockify--select-project (clockify--get-projects)))
-                      (cons "description" (read-string "Description: ")))))
+  (let ((workspace (clockify--select-workspace)))
+    (clockify--request "POST" (concat "/workspaces/" workspace "/time-entries")
+                       (list
+                        (cons "start" (format-time-string "%Y-%m-%dT%TZ" (current-time) t))
+                        (cons "projectId" (clockify--select-project workspace))
+                        (cons "description" (read-string "Description: "))))))
 
 (defun clockify-stop ()
   "Stop a clockify time entry for the selected project."
   (interactive)
-  (clockify--request "PATCH" (concat "/workspaces/" clockify-workspace "/user/" clockify-user-id "/time-entries")
-                     (list
-                      (cons "end" (format-time-string "%Y-%m-%dT%TZ" (current-time) t)))))
+  (let ((workspace (clockify--select-workspace)))
+    (clockify--request "PATCH" (concat "/workspaces/" workspace "/user/" clockify-user-id "/time-entries")
+                       (list
+                        (cons "end" (format-time-string "%Y-%m-%dT%TZ" (current-time) t))))))
 
 (provide 'clockify)
 ;;; clockify.el ends here
